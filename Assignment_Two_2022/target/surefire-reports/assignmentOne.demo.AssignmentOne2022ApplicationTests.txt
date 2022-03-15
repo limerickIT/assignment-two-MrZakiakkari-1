@@ -1,7 +1,0 @@
--------------------------------------------------------------------------------
-Test set: assignmentOne.demo.AssignmentOne2022ApplicationTests
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.254 s <<< FAILURE! - in assignmentOne.demo.AssignmentOne2022ApplicationTests
-assignmentOne.demo.AssignmentOne2022ApplicationTests  Time elapsed: 0.252 s  <<< ERROR!
-java.lang.IllegalStateException: Unable to find a @SpringBootConfiguration, you need to use @ContextConfiguration or @SpringBootTest(classes=...) with your test
-
