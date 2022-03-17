@@ -3,6 +3,7 @@ package com.sd4.service;
 import com.sd4.model.Beer;
 import com.sd4.repository.BeerRepository;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,9 +35,9 @@ public class BeerService
 		beerRepository.save(beer);
 	}
 
-	public Beer get(long id)
+	public Optional<Beer> get(long id)
 	{
-		return beerRepository.findById(id).get();
+		return beerRepository.findById(id);
 	}
 
 }
