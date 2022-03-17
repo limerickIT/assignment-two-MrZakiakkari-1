@@ -7,7 +7,7 @@ import org.springframework.data.repository.CrudRepository;
  *
  * @author M.Zaki Al Akkari <https://github.com/MrZakiakkari>
  */
-public interface BreweryRepository extends CrudRepository<Brewery, Integer>
+public interface BreweryRepository extends CrudRepository<Brewery, Long>
 {
 
 }
