@@ -9,11 +9,14 @@ import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,21 +27,43 @@ public class BeerHateoasController
 	@Autowired
 	private BeerService beerService;
 
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Beer> createBeer(@RequestBody Beer newBeer)
+	{
+		Beer beer = beerService.save(newBeer);
+		return ResponseEntity.ok(beer);
+	}
+
+	@DeleteMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity deleteBeerById(@PathVariable("id") long id)
+	{
+		Optional<Beer> optional = beerService.get(id);
+		if (optional.isEmpty())
+		{
+			return ResponseEntity.notFound().build();
+		}
+		//beerService.deleteById(id);
+		return ResponseEntity.ok(optional.get());
+	}
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<Beer> getBeerById(@PathVariable("id") long id)
 	{
 		Optional<Beer> optional = beerService.get(id);
 		if (optional.isEmpty())
 		{
-			return new ResponseEntity(HttpStatus.NOT_FOUND);
+			return ResponseEntity.notFound().build();
 		}
-		Link selfLink = linkTo(methodOn(getClass()).getBeerById(id)).withSelfRel();
+		Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
+
 		optional.get().add(selfLink);
 		return ResponseEntity.ok(optional.get());
 	}
+
 	@GetMapping(value = "", produces = MediaTypes.HAL_JSON_VALUE)
-	public CollectionModel<Beer> getItems()
+	public CollectionModel<Beer> getBeers()
 	{
+		System.out.println("getBeers");
+
 		List<Beer> beers = beerService.listAll();
 
 		for (Beer beer : beers)
@@ -51,5 +76,16 @@ public class BeerHateoasController
 		Link link = linkTo(getClass()).withSelfRel();
 		CollectionModel<Beer> collectionModel = CollectionModel.of(beers, link);
 		return collectionModel;
+	}
+
+	@PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity updateBeer(@PathVariable("id") long id, @RequestBody Beer beer)
+	{
+		if (id != beer.getId())
+		{
+			return ResponseEntity.badRequest().build();
+		}
+		beerService.save(beer);
+		return ResponseEntity.ok(beer);
 	}
 }

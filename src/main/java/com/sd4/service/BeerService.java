@@ -30,14 +30,18 @@ public class BeerService
 		return (List<Beer>) beerRepository.findAll();
 	}
 
-	public void save(Beer beer)
+	public Beer save(Beer beer)
 	{
-		beerRepository.save(beer);
+		return beerRepository.save(beer);
 	}
 
 	public Optional<Beer> get(long id)
 	{
 		return beerRepository.findById(id);
+	}
+	public void deleteById(long id)
+	{
+		beerRepository.deleteById(id);
 	}
 
 }

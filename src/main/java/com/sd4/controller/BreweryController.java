@@ -14,16 +14,21 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 /**
@@ -44,24 +49,59 @@ public class BreweryController
 				.connectTimeout(10L, TimeUnit.SECONDS)
 				.build();
 	}
+
 	@Autowired
 	BreweryRepository breweryRepository;
 
+	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Brewery> createBrewery(@RequestBody Brewery newBrewery)
+	{
+		Brewery brewery = breweryRepository.save(newBrewery);
+		return ResponseEntity.ok(brewery);
+	}
+
+	@DeleteMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity deleteBreweryById(@PathVariable("id") Long id)
+	{
+		Optional<Brewery> optional = breweryRepository.findById(id);
+		if (optional.isEmpty())
+		{
+			return ResponseEntity.notFound().build();
+		}
+		//breweryService.deleteById(id);
+		return ResponseEntity.ok(optional.get());
+	}
+
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-	public ResponseEntity<Brewery> getBeerById(@PathVariable("id") long id)
+	public ResponseEntity<Brewery> getBreweryById(@PathVariable("id") long id)
 	{
 		Optional<Brewery> optional = breweryRepository.findById(id);
 		if (optional.isEmpty())
 		{
 			return new ResponseEntity(HttpStatus.NOT_FOUND);
 		}
-		Link selfLink = linkTo(methodOn(getClass()).getBeerById(id)).withSelfRel();
+		Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
 		optional.get().add(selfLink);
 		return ResponseEntity.ok(optional.get());
 	}
 
+	@GetMapping(value = "", produces = MediaTypes.HAL_JSON_VALUE)
+	public CollectionModel<Brewery> getBreweries()
+	{
+		Iterable<Brewery> breweries = breweryRepository.findAll();
+		for (Brewery brewery : breweries)
+		{
+			long id = brewery.getId();
+			Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
+			brewery.add(selfLink);
+		}
+		Link link = linkTo(getClass()).withSelfRel();
+		CollectionModel<Brewery> collectionModel = CollectionModel.of(breweries, link);
+		return collectionModel;
+	}
+
 	@RequestMapping("/map/{id}")
-	public ResponseEntity<String> page(Model model) throws InterruptedException, IOException
+	public ResponseEntity<String> map(Model model) throws InterruptedException, IOException
 	{
 		String address = "123 main street, new york, ny";
 		try
@@ -79,4 +119,14 @@ public class BreweryController
 		}
 	}
 
+	@PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity updateBrewery(@PathVariable("id") long id, @RequestBody Brewery brewery)
+	{
+		if (id != brewery.getId())
+		{
+			return ResponseEntity.badRequest().build();
+		}
+		breweryRepository.save(brewery);
+		return ResponseEntity.ok(brewery);
+	}
 }
