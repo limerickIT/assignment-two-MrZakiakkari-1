@@ -8,10 +8,16 @@ import com.google.maps.GeocodingApiRequest;
 import com.google.maps.errors.ApiException;
 import com.google.maps.model.GeocodingResult;
 import com.sd4.model.Brewery;
-import com.sd4.repository.BreweryRepository;
+import com.sd4.service.BreweryService;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
+import net.glxn.qrgen.core.vcard.VCard;
+import net.glxn.qrgen.javase.QRCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.hateoas.CollectionModel;
@@ -51,19 +57,19 @@ public class BreweryController
 	}
 
 	@Autowired
-	BreweryRepository breweryRepository;
+	BreweryService breweryService;
 
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Brewery> createBrewery(@RequestBody Brewery newBrewery)
 	{
-		Brewery brewery = breweryRepository.save(newBrewery);
+		Brewery brewery = breweryService.save(newBrewery);
 		return ResponseEntity.ok(brewery);
 	}
 
 	@DeleteMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity deleteBreweryById(@PathVariable("id") Long id)
 	{
-		Optional<Brewery> optional = breweryRepository.findById(id);
+		Optional<Brewery> optional = breweryService.findById(id);
 		if (optional.isEmpty())
 		{
 			return ResponseEntity.notFound().build();
@@ -75,7 +81,7 @@ public class BreweryController
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<Brewery> getBreweryById(@PathVariable("id") long id)
 	{
-		Optional<Brewery> optional = breweryRepository.findById(id);
+		Optional<Brewery> optional = breweryService.findById(id);
 		if (optional.isEmpty())
 		{
 			return new ResponseEntity(HttpStatus.NOT_FOUND);
@@ -88,7 +94,7 @@ public class BreweryController
 	@GetMapping(value = "", produces = MediaTypes.HAL_JSON_VALUE)
 	public CollectionModel<Brewery> getBreweries()
 	{
-		Iterable<Brewery> breweries = breweryRepository.findAll();
+		Iterable<Brewery> breweries = breweryService.findAll();
 		for (Brewery brewery : breweries)
 		{
 			long id = brewery.getId();
@@ -100,7 +106,7 @@ public class BreweryController
 		return collectionModel;
 	}
 
-	@RequestMapping("/map/{id}")
+	@GetMapping("/map/{id}")
 	public ResponseEntity<String> map(Model model) throws InterruptedException, IOException
 	{
 		String address = "123 main street, new york, ny";
@@ -126,7 +132,27 @@ public class BreweryController
 		{
 			return ResponseEntity.badRequest().build();
 		}
-		breweryRepository.save(brewery);
+		breweryService.save(brewery);
 		return ResponseEntity.ok(brewery);
+	}
+
+	@GetMapping(value = "/qrcode/{breweryId}", produces = MediaType.IMAGE_PNG_VALUE)
+	public ResponseEntity<BufferedImage> zxingQRCode(@PathVariable("breweryId") long breweryId) throws Exception
+	{
+		Optional<Brewery> optional = breweryService.findById(breweryId);
+		if (optional.isEmpty())
+		{
+			return new ResponseEntity(HttpStatus.NOT_FOUND);
+		}
+
+		VCard vCard = breweryService.getVard(optional.get());
+
+		ByteArrayOutputStream stream = QRCode
+				.from(vCard.toString())
+				.withSize(250, 250)
+				.stream();
+		BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(stream.toByteArray()));
+
+		return ResponseEntity.ok(bufferedImage);
 	}
 }
