@@ -2,13 +2,18 @@ package com.sd4.controller;
 
 import com.sd4.model.Beer;
 import com.sd4.service.BeerService;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import javax.imageio.ImageIO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,7 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(value = "beers")
+@RequestMapping(value = "beer")
 public class BeerHateoasController
 {
 	@Autowired
@@ -37,7 +42,7 @@ public class BeerHateoasController
 	@DeleteMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity deleteBeerById(@PathVariable("id") long id)
 	{
-		Optional<Beer> optional = beerService.get(id);
+		Optional<Beer> optional = beerService.findById(id);
 		if (optional.isEmpty())
 		{
 			return ResponseEntity.notFound().build();
@@ -48,7 +53,7 @@ public class BeerHateoasController
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<Beer> getBeerById(@PathVariable("id") long id)
 	{
-		Optional<Beer> optional = beerService.get(id);
+		Optional<Beer> optional = beerService.findById(id);
 		if (optional.isEmpty())
 		{
 			return ResponseEntity.notFound().build();
@@ -64,7 +69,7 @@ public class BeerHateoasController
 	{
 		System.out.println("getBeers");
 
-		List<Beer> beers = beerService.listAll();
+		List<Beer> beers = beerService.findAll();
 
 		for (Beer beer : beers)
 		{
@@ -87,5 +92,25 @@ public class BeerHateoasController
 		}
 		beerService.save(beer);
 		return ResponseEntity.ok(beer);
+	}
+
+	@GetMapping(value = "/image/{beerId}/{size}", produces = MediaType.IMAGE_JPEG_VALUE)
+	public ResponseEntity<BufferedImage> getBeerImage(@PathVariable("beerId") long beerId, @PathVariable("size") String size) throws Exception
+	{
+		Optional<Beer> optional = beerService.findById(beerId);
+		if (optional.isEmpty())
+		{
+			return new ResponseEntity(HttpStatus.NOT_FOUND);
+		}
+
+		String path = "static/assets/images/"
+				+ ("thumbnail".equalsIgnoreCase(size) ? "thumbs" : "large")
+				+ "/" + optional.get().getImage();
+
+		System.out.println(path);
+		final InputStream inputStream = new ClassPathResource(path).getInputStream();
+
+		BufferedImage bufferedImage = ImageIO.read(inputStream);
+		return ResponseEntity.ok(bufferedImage);
 	}
 }

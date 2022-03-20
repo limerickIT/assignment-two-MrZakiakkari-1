@@ -17,7 +17,7 @@ public class BeerService
 	@Autowired
 	private BeerRepository beerRepository;
 
-	public List<Beer> listAll(String keyword)
+	public List<Beer> search(String keyword)
 	{
 		if (keyword != null)
 		{
@@ -25,7 +25,7 @@ public class BeerService
 		}
 		return (List<Beer>) beerRepository.findAll();
 	}
-	public List<Beer> listAll()
+	public List<Beer> findAll()
 	{
 		return (List<Beer>) beerRepository.findAll();
 	}
@@ -35,7 +35,7 @@ public class BeerService
 		return beerRepository.save(beer);
 	}
 
-	public Optional<Beer> get(long id)
+	public Optional<Beer> findById(long id)
 	{
 		return beerRepository.findById(id);
 	}
