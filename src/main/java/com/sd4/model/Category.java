@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import org.springframework.hateoas.RepresentationModel;
 
 @Getter
 @Setter
@@ -20,14 +21,15 @@ import lombok.ToString;
 @AllArgsConstructor
 @ToString
 @Entity
-public class Category implements Serializable {
+public class Category extends RepresentationModel<Beer> implements Serializable
+{
 
-    @Id
-    @GeneratedValue(strategy =GenerationType.AUTO)
-    private long id;
-    private String cat_name;
-    
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date last_mod;
-    
+	@Id
+	@GeneratedValue(strategy = GenerationType.AUTO)
+	private Long id;
+	private String cat_name;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date last_mod;
+
 }
