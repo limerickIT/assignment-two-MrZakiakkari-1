@@ -22,7 +22,6 @@ import org.springframework.hateoas.RepresentationModel;
 @AllArgsConstructor
 @ToString
 @Entity
-
 public class Beer extends RepresentationModel<Beer> implements Serializable
 {
 

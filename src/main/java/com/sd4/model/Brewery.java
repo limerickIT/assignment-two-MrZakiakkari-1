@@ -26,7 +26,7 @@ import org.springframework.hateoas.RepresentationModel;
 @AllArgsConstructor
 @ToString
 @Entity
-public class Brewery extends RepresentationModel<Beer> implements Serializable
+public class Brewery extends RepresentationModel<Brewery> implements Serializable
 {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

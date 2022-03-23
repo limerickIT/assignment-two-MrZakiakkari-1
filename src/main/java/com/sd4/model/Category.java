@@ -21,7 +21,7 @@ import org.springframework.hateoas.RepresentationModel;
 @AllArgsConstructor
 @ToString
 @Entity
-public class Category extends RepresentationModel<Beer> implements Serializable
+public class Category extends RepresentationModel<Category> implements Serializable
 {
 
 	@Id
