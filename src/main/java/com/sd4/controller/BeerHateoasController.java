@@ -136,7 +136,7 @@ public class BeerHateoasController
 		BufferedImage bufferedImage = ImageIO.read(inputStream);
 		return ResponseEntity.ok(bufferedImage);
 	}
-	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.IMAGE_JPEG_VALUE)
+	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.APPLICATION_PDF_VALUE)
 	public ResponseEntity<BeerPdfPrinter> getPdf(@PathVariable("beerId") long beerId) throws Exception
 	{
 		Optional<Beer> optional = beerService.findById(beerId);
@@ -144,15 +144,22 @@ public class BeerHateoasController
 		{
 			return new ResponseEntity(HttpStatus.NOT_FOUND);
 		}
+		Beer beer = optional.get();
 
-		Optional<Brewery> brewery = breweryService.findById(optional.get().getBrewery_id());
-		Optional<Category> category = categoryService.findById(optional.get().getCat_id());
-		Optional<Style> style = styleRepository.findById(optional.get().getStyle_id());
-		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(optional.get(), brewery.get(), category.get(), style.get());
+		Optional<Brewery> brewery = breweryService.findById(beer.getBrewery_id());
+		Optional<Category> category = categoryService.findById(beer.getCat_id());
+		Optional<Style> style = styleRepository.findById(beer.getStyle_id());
+		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(beer, brewery.get(), category.get(), style.get());
 
-		beerPdfPrinter.generatePdfReport();
+		File pdfFile = beerPdfPrinter.generatePdfReport();
 
-		return ResponseEntity.ok(beerPdfPrinter);
+		final InputStream inputStream = new FileInputStream(pdfFile);
+
+		final HttpHeaders responseHeaders = new HttpHeaders();
+		responseHeaders.set("Content-Disposition", "attachment; filename=\"" + optional.get().getName() + ".pdf\"");
+
+		ResponseEntity responseEntity = new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
+		return responseEntity;
 	}
 
 	@GetMapping(value = "/zipped", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)

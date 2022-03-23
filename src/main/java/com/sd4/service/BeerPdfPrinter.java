@@ -16,43 +16,16 @@ import com.sd4.model.Brewery;
 import com.sd4.model.Category;
 import com.sd4.model.Style;
 import java.awt.image.BufferedImage;
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
 import javax.imageio.ImageIO;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Component;
 
-@Component("pdfGenerator")
 public class BeerPdfPrinter
 {
-
-	@Value("${pdfDir}")
-	private String pdfDir;
-
-	@Value("${reportFileName}")
-	private String reportFileName;
-
-	@Value("${reportFileNameDateFormat}")
-	private String reportFileNameDateFormat;
-
-	@Value("${localDateFormat}")
-	private String localDateFormat;
-
-	@Value("${logoImgScale}")
-	private Float[] logoImgScale;
-
-	@Value("${currencySymbol:}")
-	private String currencySymbol;
-
-	@Value("${table_noOfColumns}")
-	private int noOfColumns;
-
 	Beer beer;
 	Brewery brewery;
 	Category category;
@@ -65,52 +38,39 @@ public class BeerPdfPrinter
 		this.style = style;
 	}
 
-	@Value("${table.columnNames}")
-	private List<String> columnNames;
+	private static final Font COURIER = new Font(Font.FontFamily.COURIER, 20, Font.BOLD);
+	private static final Font COURIER_SMALL = new Font(Font.FontFamily.COURIER, 16, Font.BOLD);
+	private static final Font COURIER_SMALL_FOOTER = new Font(Font.FontFamily.COURIER, 12, Font.BOLD);
 
-	private static Font COURIER = new Font(Font.FontFamily.COURIER, 20, Font.BOLD);
-	private static Font COURIER_SMALL = new Font(Font.FontFamily.COURIER, 16, Font.BOLD);
-	private static Font COURIER_SMALL_FOOTER = new Font(Font.FontFamily.COURIER, 12, Font.BOLD);
-
-	public Document generatePdfReport()
+	public File generatePdfReport() throws DocumentException, IOException
 	{
-
-		Document document = new Document();
-
-		try
+		File file = File.createTempFile("report", ".pdf");
+		try ( FileOutputStream fileOutputStream = new FileOutputStream(file))
 		{
-			PdfWriter.getInstance(document, new FileOutputStream(getPdfNameWithDate()));
+			Document document = new Document();
+			PdfWriter.getInstance(document, fileOutputStream);
 			document.open();
 			addLogo(document);
 			addDocTitle(document);
-			createTable(document, noOfColumns);
+			//createTable(document, 8);
 			addFooter(document);
 			document.close();
-			return document;
-			//System.out.println("------------------Your PDF Report is ready!-------------------------");
-
+			return file;
 		}
-		catch (FileNotFoundException | DocumentException e)
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
 	}
 
 	private void addLogo(Document document)
 	{
 		try
 		{
-			String path = "static/assets/images/large"
-					+ "/" + beer.getImage();
+			String path = "static/assets/images/large/" + beer.getImage();
 
 			System.out.println(path);
 			final InputStream inputStream = new ClassPathResource(path).getInputStream();
 
 			BufferedImage bufferedImage = ImageIO.read(inputStream);
 			Image img = Image.getInstance(path);
-			img.scalePercent(logoImgScale[0], logoImgScale[1]);
+			img.scalePercent(250, 250);
 			img.setAlignment(Element.ALIGN_RIGHT);
 			document.add(img);
 		}
@@ -123,13 +83,12 @@ public class BeerPdfPrinter
 
 	private void addDocTitle(Document document) throws DocumentException
 	{
-		String localDateString = LocalDateTime.now().format(DateTimeFormatter.ofPattern(localDateFormat));
 		Paragraph p1 = new Paragraph();
 		leaveEmptyLine(p1, 1);
 		p1.add(new Paragraph(beer.getName(), COURIER));
 		p1.setAlignment(Element.ALIGN_CENTER);
 		leaveEmptyLine(p1, 1);
-		p1.add(new Paragraph("Report generated on " + localDateString, COURIER_SMALL));
+		p1.add(new Paragraph("Report generated on ", COURIER_SMALL));
 
 		document.add(p1);
 
@@ -145,7 +104,7 @@ public class BeerPdfPrinter
 
 		for (int i = 0; i < noOfColumns; i++)
 		{
-			PdfPCell cell = new PdfPCell(new Phrase(columnNames.get(i)));
+			PdfPCell cell = new PdfPCell(new Phrase(i + ""));
 			cell.setHorizontalAlignment(Element.ALIGN_CENTER);
 			cell.setBackgroundColor(BaseColor.CYAN);
 			table.addCell(cell);
@@ -161,7 +120,7 @@ public class BeerPdfPrinter
 		leaveEmptyLine(p2, 3);
 		p2.setAlignment(Element.ALIGN_MIDDLE);
 		p2.add(new Paragraph(
-				"------------------------End Of " + reportFileName + "------------------------",
+				"------------------------End Of Report------------------------",
 				COURIER_SMALL_FOOTER));
 
 		document.add(p2);
@@ -177,7 +136,7 @@ public class BeerPdfPrinter
 
 	private String getPdfNameWithDate()
 	{
-		String localDateString = LocalDateTime.now().format(DateTimeFormatter.ofPattern(reportFileNameDateFormat));
-		return pdfDir + reportFileName + "-" + localDateString + ".pdf";
+		String localDateString = LocalDateTime.now().toString();
+		return "Report" + localDateString;
 	}
 }
