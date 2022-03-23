@@ -1,7 +1,14 @@
 package com.sd4.controller;
 
 import com.sd4.model.Beer;
+import com.sd4.model.Brewery;
+import com.sd4.model.Category;
+import com.sd4.model.Style;
+import com.sd4.repository.StyleRepository;
+import com.sd4.service.BeerPdfPrinter;
 import com.sd4.service.BeerService;
+import com.sd4.service.BreweryService;
+import com.sd4.service.CategoryService;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.util.List;
@@ -31,6 +38,13 @@ public class BeerHateoasController
 {
 	@Autowired
 	private BeerService beerService;
+	@Autowired
+	private BreweryService breweryService;
+
+	@Autowired
+	private CategoryService categoryService;
+	@Autowired
+	private StyleRepository styleRepository;
 
 	@PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Beer> createBeer(@RequestBody Beer newBeer)
@@ -111,6 +125,24 @@ public class BeerHateoasController
 		final InputStream inputStream = new ClassPathResource(path).getInputStream();
 
 		BufferedImage bufferedImage = ImageIO.read(inputStream);
+		return ResponseEntity.ok(bufferedImage);
+	}
+	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.IMAGE_JPEG_VALUE)
+	public ResponseEntity<BufferedImage> getPdf(@PathVariable("beerId") long beerId) throws Exception
+	{
+		Optional<Beer> optional = beerService.findById(beerId);
+		if (optional.isEmpty())
+		{
+			return new ResponseEntity(HttpStatus.NOT_FOUND);
+		}
+
+		Optional<Brewery> brewery = breweryService.findById(optional.get().getBrewery_id());
+		Optional<Category> category = categoryService.findById(optional.get().getCat_id());
+		Optional<Style> style = styleRepository.findById(optional.get().getStyle_id());
+		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(optional.get(), brewery.get(), category.get(), style.get());
+
+		beerPdfPrinter.generatePdfReport();
+
 		return ResponseEntity.ok(bufferedImage);
 	}
 }

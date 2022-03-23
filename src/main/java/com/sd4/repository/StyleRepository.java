@@ -7,7 +7,7 @@ import org.springframework.data.repository.CrudRepository;
  *
  * @author M.Zaki Al Akkari <https://github.com/MrZakiakkari>
  */
-public interface StyleRepository extends CrudRepository<Style, Long>
+public interface StyleRepository extends CrudRepository<Style, Integer>
 {
 
 }
