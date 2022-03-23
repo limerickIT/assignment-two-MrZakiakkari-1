@@ -10,16 +10,25 @@ import com.sd4.service.BeerService;
 import com.sd4.service.BreweryService;
 import com.sd4.service.CategoryService;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import javax.imageio.ImageIO;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -128,7 +137,7 @@ public class BeerHateoasController
 		return ResponseEntity.ok(bufferedImage);
 	}
 	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.IMAGE_JPEG_VALUE)
-	public ResponseEntity<BufferedImage> getPdf(@PathVariable("beerId") long beerId) throws Exception
+	public ResponseEntity<BeerPdfPrinter> getPdf(@PathVariable("beerId") long beerId) throws Exception
 	{
 		Optional<Beer> optional = beerService.findById(beerId);
 		if (optional.isEmpty())
@@ -143,6 +152,59 @@ public class BeerHateoasController
 
 		beerPdfPrinter.generatePdfReport();
 
-		return ResponseEntity.ok(bufferedImage);
+		return ResponseEntity.ok(beerPdfPrinter);
+	}
+
+	@GetMapping(value = "/zipped", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	public ResponseEntity<byte[]> getFile() throws IOException
+	{
+		File zipFile = zipBeerImages(beerService.findAll());
+		final InputStream inputStream = new FileInputStream(zipFile);
+
+		final HttpHeaders responseHeaders = new HttpHeaders();
+		responseHeaders.set("Content-Disposition", "attachment; filename=\"beer-images.zip\"");
+
+		ResponseEntity responseEntity = new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
+		return responseEntity;
+	}
+
+	public static File zipBeerImages(List<Beer> beers) throws IOException
+	{
+		List<String> imageFilenames = beers.stream()
+				.map(Beer::getImage)
+				.distinct()
+				.toList();
+
+		File zipFile = File.createTempFile("result", ".zip");
+
+		try ( FileOutputStream fileOutputStream = new FileOutputStream(zipFile);  ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream))
+		{
+			for (String imageFilename : imageFilenames)
+			{
+				String path = "static/assets/images/large/" + imageFilename;
+				var resource = new ClassPathResource(path);
+				addFileToZipStream(resource.getFile(), zipOutputStream);
+			}
+		}
+		return zipFile;
+	}
+
+	// Method to zip file
+	private static void addFileToZipStream(File file, ZipOutputStream zipOutputStream) throws IOException
+	{
+		final int BUFFER_SIZE = 1024;
+
+		try ( FileInputStream fileInputStream = new FileInputStream(file);  BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream, BUFFER_SIZE))
+		{
+			ZipEntry zipEntry = new ZipEntry(file.getName());
+			zipOutputStream.putNextEntry(zipEntry);
+			byte data[] = new byte[BUFFER_SIZE];
+			int count;
+			while ((count = bufferedInputStream.read(data, 0, BUFFER_SIZE)) != -1)
+			{
+				zipOutputStream.write(data, 0, count);
+			}
+			zipOutputStream.closeEntry();
+		}
 	}
 }
