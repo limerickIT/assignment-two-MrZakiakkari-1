@@ -10,16 +10,12 @@ import com.sd4.service.BeerService;
 import com.sd4.service.BreweryService;
 import com.sd4.service.CategoryService;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import javax.imageio.ImageIO;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +45,6 @@ public class BeerHateoasController
 	private BeerService beerService;
 	@Autowired
 	private BreweryService breweryService;
-
 	@Autowired
 	private CategoryService categoryService;
 	@Autowired
@@ -73,6 +68,7 @@ public class BeerHateoasController
 		//beerService.deleteById(id);
 		return ResponseEntity.ok(optional.get());
 	}
+
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<Beer> getBeerById(@PathVariable("id") long id)
 	{
@@ -106,6 +102,74 @@ public class BeerHateoasController
 		return collectionModel;
 	}
 
+	/**
+	 *
+	 * @param beerId
+	 * @param size represents the size type of the image
+	 * @return
+	 * @throws Exception
+	 */
+	@GetMapping(value = "/image/{beerId}/{size}", produces = MediaType.IMAGE_JPEG_VALUE)
+	public ResponseEntity<BufferedImage> getBeerImage(@PathVariable("beerId") final long beerId, @PathVariable("size") final String size) throws Exception
+	{
+		final Optional<Beer> optional = beerService.findById(beerId);
+		if (optional.isEmpty())
+		{
+			return new ResponseEntity(HttpStatus.NOT_FOUND);
+		}
+		final Beer beer = optional.get();
+		final String path = "static/assets/images/"
+				+ ("thumbnail".equalsIgnoreCase(size) ? "thumbs" : "large") // determines if it is thumbnail or large
+				+ "/" + beer.getImage();
+
+		try (final InputStream inputStream = new ClassPathResource(path).getInputStream())
+		{
+			return ResponseEntity.ok(ImageIO.read(inputStream));
+		}
+	}
+
+	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.APPLICATION_PDF_VALUE)
+	public ResponseEntity<BeerPdfPrinter> getPdf(@PathVariable("beerId") long beerId) throws Exception
+	{
+		final Optional<Beer> optional = beerService.findById(beerId);
+		if (optional.isEmpty())
+		{
+			return new ResponseEntity(HttpStatus.NOT_FOUND);
+		}
+		final Beer beer = optional.get();
+
+		Optional<Brewery> brewery = breweryService.findById(beer.getBrewery_id());
+		Optional<Category> category = categoryService.findById(beer.getCat_id());
+		Optional<Style> style = styleRepository.findById(beer.getStyle_id());
+
+		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(beer, brewery.get(), category.get(), style.get());
+
+		final File pdfFile = beerPdfPrinter.generatePdfReport();
+		try (final InputStream inputStream = new FileInputStream(pdfFile))
+		{
+			final HttpHeaders responseHeaders = new HttpHeaders();
+			final String filename = beer.getName() + ".pdf";
+			responseHeaders.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+			return new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
+		}
+	}
+
+	@GetMapping(value = "/zipped", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	public ResponseEntity<byte[]> getZippedBeerImages() throws IOException
+	{
+		final List<Beer> beers = beerService.findAll();
+		final File zipFile = BeerService.zipBeerImages(beers);
+		try (final InputStream inputStream = new FileInputStream(zipFile))
+		{
+			final HttpHeaders responseHeaders = new HttpHeaders();
+			final String filename = "beer-images.zip";
+			responseHeaders.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+			return new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
+		}
+	}
+
 	@PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity updateBeer(@PathVariable("id") long id, @RequestBody Beer beer)
 	{
@@ -115,103 +179,5 @@ public class BeerHateoasController
 		}
 		beerService.save(beer);
 		return ResponseEntity.ok(beer);
-	}
-
-	@GetMapping(value = "/image/{beerId}/{size}", produces = MediaType.IMAGE_JPEG_VALUE)
-	public ResponseEntity<BufferedImage> getBeerImage(@PathVariable("beerId") long beerId, @PathVariable("size") String size) throws Exception
-	{
-		Optional<Beer> optional = beerService.findById(beerId);
-		if (optional.isEmpty())
-		{
-			return new ResponseEntity(HttpStatus.NOT_FOUND);
-		}
-
-		String path = "static/assets/images/"
-				+ ("thumbnail".equalsIgnoreCase(size) ? "thumbs" : "large")
-				+ "/" + optional.get().getImage();
-
-		System.out.println(path);
-		final InputStream inputStream = new ClassPathResource(path).getInputStream();
-
-		BufferedImage bufferedImage = ImageIO.read(inputStream);
-		return ResponseEntity.ok(bufferedImage);
-	}
-	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.APPLICATION_PDF_VALUE)
-	public ResponseEntity<BeerPdfPrinter> getPdf(@PathVariable("beerId") long beerId) throws Exception
-	{
-		Optional<Beer> optional = beerService.findById(beerId);
-		if (optional.isEmpty())
-		{
-			return new ResponseEntity(HttpStatus.NOT_FOUND);
-		}
-		Beer beer = optional.get();
-
-		Optional<Brewery> brewery = breweryService.findById(beer.getBrewery_id());
-		Optional<Category> category = categoryService.findById(beer.getCat_id());
-		Optional<Style> style = styleRepository.findById(beer.getStyle_id());
-		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(beer, brewery.get(), category.get(), style.get());
-
-		File pdfFile = beerPdfPrinter.generatePdfReport();
-
-		final InputStream inputStream = new FileInputStream(pdfFile);
-
-		final HttpHeaders responseHeaders = new HttpHeaders();
-		responseHeaders.set("Content-Disposition", "attachment; filename=\"" + optional.get().getName() + ".pdf\"");
-
-		ResponseEntity responseEntity = new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
-		return responseEntity;
-	}
-
-	@GetMapping(value = "/zipped", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-	public ResponseEntity<byte[]> getFile() throws IOException
-	{
-		File zipFile = zipBeerImages(beerService.findAll());
-		final InputStream inputStream = new FileInputStream(zipFile);
-
-		final HttpHeaders responseHeaders = new HttpHeaders();
-		responseHeaders.set("Content-Disposition", "attachment; filename=\"beer-images.zip\"");
-
-		ResponseEntity responseEntity = new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
-		return responseEntity;
-	}
-
-	public static File zipBeerImages(List<Beer> beers) throws IOException
-	{
-		List<String> imageFilenames = beers.stream()
-				.map(Beer::getImage)
-				.distinct()
-				.toList();
-
-		File zipFile = File.createTempFile("result", ".zip");
-
-		try ( FileOutputStream fileOutputStream = new FileOutputStream(zipFile);  ZipOutputStream zipOutputStream = new ZipOutputStream(fileOutputStream))
-		{
-			for (String imageFilename : imageFilenames)
-			{
-				String path = "static/assets/images/large/" + imageFilename;
-				var resource = new ClassPathResource(path);
-				addFileToZipStream(resource.getFile(), zipOutputStream);
-			}
-		}
-		return zipFile;
-	}
-
-	// Method to zip file
-	private static void addFileToZipStream(File file, ZipOutputStream zipOutputStream) throws IOException
-	{
-		final int BUFFER_SIZE = 1024;
-
-		try ( FileInputStream fileInputStream = new FileInputStream(file);  BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream, BUFFER_SIZE))
-		{
-			ZipEntry zipEntry = new ZipEntry(file.getName());
-			zipOutputStream.putNextEntry(zipEntry);
-			byte data[] = new byte[BUFFER_SIZE];
-			int count;
-			while ((count = bufferedInputStream.read(data, 0, BUFFER_SIZE)) != -1)
-			{
-				zipOutputStream.write(data, 0, count);
-			}
-			zipOutputStream.closeEntry();
-		}
 	}
 }

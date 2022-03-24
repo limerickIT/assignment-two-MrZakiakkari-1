@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
+import net.glxn.qrgen.core.AbstractQRCode;
 import net.glxn.qrgen.core.vcard.VCard;
 import net.glxn.qrgen.javase.QRCode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,20 +140,20 @@ public class BreweryController
 	@GetMapping(value = "/qrcode/{breweryId}", produces = MediaType.IMAGE_PNG_VALUE)
 	public ResponseEntity<BufferedImage> zxingQRCode(@PathVariable("breweryId") long breweryId) throws Exception
 	{
-		Optional<Brewery> optional = breweryService.findById(breweryId);
+		final Optional<Brewery> optional = breweryService.findById(breweryId);
 		if (optional.isEmpty())
 		{
 			return new ResponseEntity(HttpStatus.NOT_FOUND);
 		}
 
-		VCard vCard = breweryService.getVard(optional.get());
+		final Brewery brewery = optional.get();
+		final VCard vCard = BreweryService.getVard(brewery);
+		final AbstractQRCode qrCode = QRCode.from(vCard.toString()).withSize(250, 250);
 
-		ByteArrayOutputStream stream = QRCode
-				.from(vCard.toString())
-				.withSize(250, 250)
-				.stream();
-		BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(stream.toByteArray()));
-
-		return ResponseEntity.ok(bufferedImage);
+		try (final ByteArrayOutputStream stream = qrCode.stream())
+		{
+			BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(stream.toByteArray()));
+			return ResponseEntity.ok(bufferedImage);
+		}
 	}
 }

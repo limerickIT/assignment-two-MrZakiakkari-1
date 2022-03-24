@@ -33,7 +33,7 @@ public class BreweryService
 		return breweryRepository.findById(id);
 	}
 
-	public VCard getVard(Brewery brewery)
+	public static VCard getVard(Brewery brewery)
 	{
 		VCard vCard = new VCard();
 		vCard.setName(brewery.getName());
@@ -51,5 +51,4 @@ public class BreweryService
 	{
 		breweryRepository.deleteById(id);
 	}
-
 }

@@ -24,6 +24,13 @@ public class AssignmentTwo2022Application
 	{
 		SpringApplication.run(AssignmentTwo2022Application.class, args);
 	}
+	/**
+	 * Also, we need to manually register a message converter for BufferedImage
+	 * HTTP Responses because there is no default:
+	 *
+	 * @@link https://www.baeldung.com/java-generating-barcodes-qr-codes
+	 * @return
+	 */
 	@Bean
 	public HttpMessageConverter<BufferedImage> createImageHttpMessageConverter()
 	{
