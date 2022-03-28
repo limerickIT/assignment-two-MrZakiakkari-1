@@ -38,7 +38,7 @@ public class BreweryService
 		VCard vCard = new VCard();
 		vCard.setName(brewery.getName());
 		vCard.setCompany(brewery.getName());
-		vCard.setAddress(brewery.getAddress1());
+		vCard.setAddress(brewery.getAddress1() + "," + brewery.getAddress2() + "," + brewery.getCity() + "," + brewery.getCountry());
 		vCard.setPhoneNumber(brewery.getPhone());
 		vCard.setTitle("Brewery");
 		vCard.setEmail(brewery.getEmail());

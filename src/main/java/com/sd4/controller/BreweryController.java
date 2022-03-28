@@ -1,18 +1,11 @@
 package com.sd4.controller;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.maps.GeoApiContext;
-import com.google.maps.GeocodingApi;
-import com.google.maps.GeocodingApiRequest;
-import com.google.maps.errors.ApiException;
-import com.google.maps.model.GeocodingResult;
 import com.sd4.model.Brewery;
 import com.sd4.service.BreweryService;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.imageio.ImageIO;
@@ -29,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -107,23 +99,27 @@ public class BreweryController
 		return collectionModel;
 	}
 
-	@GetMapping("/map/{id}")
-	public ResponseEntity<String> map(Model model) throws InterruptedException, IOException
+	@GetMapping("/map/{breweryId}")
+	public ResponseEntity<String> getMap(@PathVariable long breweryId)
 	{
-		String address = "123 main street, new york, ny";
-		try
+		final Optional<Brewery> optional = breweryService.findById(breweryId);
+		if (optional.isEmpty())
 		{
-			GeocodingApiRequest req = GeocodingApi.newRequest(geoApiContext);
-			GeocodingResult[] results = req.address(address).await();
-			Gson gson = new GsonBuilder().setPrettyPrinting().create();
-			String jsonResults = gson.toJson(results);
-			return ResponseEntity.ok(jsonResults);
+			return new ResponseEntity(HttpStatus.NOT_FOUND);
 		}
-		catch (ApiException e)
-		{
-			System.out.println(e);
-			return ResponseEntity.ok(e.getMessage());
-		}
+		final Brewery brewery = optional.get();
+
+		String name = brewery.getName();
+		String address = optional.get().getAddress1();
+		String address2 = optional.get().getAddress2();
+		String city = optional.get().getCity();
+		String country = optional.get().getCountry();
+		String code = optional.get().getCode();
+
+		return ResponseEntity.ok("<html><body><h2>" + name + address + address2 + city
+				+ "</h2><iframe width=\"600\" height=\"500\" id=\"gmap_canvas\" src=\"https://maps.google.com/maps?q="
+				+ name + address + address2 + city + code + country
+				+ "=&output=embed\" frameborder=\"0\" scrolling=\"no\" marginheight=\"0\" marginwidth=\"0\">");
 	}
 
 	@PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -156,4 +152,5 @@ public class BreweryController
 			return ResponseEntity.ok(bufferedImage);
 		}
 	}
+
 }
