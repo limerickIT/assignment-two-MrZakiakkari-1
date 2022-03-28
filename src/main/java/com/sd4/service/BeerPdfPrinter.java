@@ -1,5 +1,7 @@
 package com.sd4.service;
 
+import com.itextpdf.text.Anchor;
+import com.itextpdf.text.BadElementException;
 import com.itextpdf.text.BaseColor;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -15,13 +17,10 @@ import com.sd4.model.Beer;
 import com.sd4.model.Brewery;
 import com.sd4.model.Category;
 import com.sd4.model.Style;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.time.LocalDateTime;
-import javax.imageio.ImageIO;
 import org.springframework.core.io.ClassPathResource;
 
 public class BeerPdfPrinter
@@ -53,32 +52,25 @@ public class BeerPdfPrinter
 			addLogo(document);
 			addDocTitle(document);
 			//createTable(document, 8);
-			addFooter(document);
 			document.close();
 			return file;
 		}
 	}
 
-	private void addLogo(Document document)
+	private void addLogo(Document document) throws BadElementException, DocumentException, IOException
 	{
-		try
-		{
-			String path = "static/assets/images/large/" + beer.getImage();
+		String path = "static/assets/images/large/" + beer.getImage();
 
-			System.out.println(path);
-			final InputStream inputStream = new ClassPathResource(path).getInputStream();
+		System.out.println(path);
 
-			BufferedImage bufferedImage = ImageIO.read(inputStream);
-			Image img = Image.getInstance(path);
-			img.scalePercent(250, 250);
-			img.setAlignment(Element.ALIGN_RIGHT);
-			document.add(img);
-		}
-		catch (DocumentException | IOException e)
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		ClassPathResource resource = new ClassPathResource(path);
+
+		System.out.println(resource.getURL().getPath());
+
+		Image img = Image.getInstance(resource.getURL());
+		img.scalePercent(50, 50);
+		img.setAlignment(Element.ALIGN_RIGHT);
+		document.add(img);
 	}
 
 	private void addDocTitle(Document document) throws DocumentException
@@ -86,9 +78,14 @@ public class BeerPdfPrinter
 		Paragraph p1 = new Paragraph();
 		leaveEmptyLine(p1, 1);
 		p1.add(new Paragraph(beer.getName(), COURIER));
+		p1.add(new Paragraph(beer.getAbv().toString(), COURIER));
+		p1.add(new Paragraph(beer.getSell_price().toString(), COURIER));
+		p1.add(new Paragraph(category.getCat_name(), COURIER));
+		p1.add(new Paragraph(beer.getDescription(), COURIER));
+		p1.add(new Paragraph(brewery.getName(), COURIER));
+		p1.add(new Paragraph(new Anchor(brewery.getWebsite(), COURIER)));
+		p1.add(new Paragraph(style.getStyle_name(), COURIER));
 		p1.setAlignment(Element.ALIGN_CENTER);
-		leaveEmptyLine(p1, 1);
-		p1.add(new Paragraph("Report generated on ", COURIER_SMALL));
 
 		document.add(p1);
 
@@ -112,18 +109,6 @@ public class BeerPdfPrinter
 
 		table.setHeaderRows(1);
 		document.add(table);
-	}
-
-	private void addFooter(Document document) throws DocumentException
-	{
-		Paragraph p2 = new Paragraph();
-		leaveEmptyLine(p2, 3);
-		p2.setAlignment(Element.ALIGN_MIDDLE);
-		p2.add(new Paragraph(
-				"------------------------End Of Report------------------------",
-				COURIER_SMALL_FOOTER));
-
-		document.add(p2);
 	}
 
 	private static void leaveEmptyLine(Paragraph paragraph, int number)

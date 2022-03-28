@@ -83,6 +83,11 @@ public class BeerHateoasController
 		return ResponseEntity.ok(optional.get());
 	}
 
+	/**
+	 * returns all beers
+	 *
+	 * @return
+	 */
 	@GetMapping(value = "", produces = MediaTypes.HAL_JSON_VALUE)
 	public CollectionModel<Beer> getBeers()
 	{
@@ -95,6 +100,11 @@ public class BeerHateoasController
 			long id = beer.getId();
 			Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
 			beer.add(selfLink);
+//			if (beerService.findById(id).size() > 0)
+//			{
+////				Link beerLink = linkTo(methodOn(BeerHateoasController.class)).getBeerById(id).withRel("allBeers");
+////				beer.add(beerLink)
+//			}
 		}
 
 		Link link = linkTo(getClass()).withSelfRel();
@@ -147,8 +157,10 @@ public class BeerHateoasController
 		final File pdfFile = beerPdfPrinter.generatePdfReport();
 		try (final InputStream inputStream = new FileInputStream(pdfFile))
 		{
+
 			final HttpHeaders responseHeaders = new HttpHeaders();
 			final String filename = beer.getName() + ".pdf";
+
 			responseHeaders.set("Content-Disposition", "attachment; filename=\"" + filename + "\"");
 
 			return new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
