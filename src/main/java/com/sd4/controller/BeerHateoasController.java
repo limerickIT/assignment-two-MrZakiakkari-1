@@ -9,6 +9,7 @@ import com.sd4.service.BeerPdfPrinter;
 import com.sd4.service.BeerService;
 import com.sd4.service.BreweryService;
 import com.sd4.service.CategoryService;
+import com.sd4.utils.AppConstants;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,13 +18,19 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import javax.imageio.ImageIO;
+import net.minidev.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.Link;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.PagedModel;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,6 +42,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -47,6 +55,8 @@ public class BeerHateoasController
 	private BreweryService breweryService;
 	@Autowired
 	private CategoryService categoryService;
+	@Autowired
+	private PagedResourcesAssembler<Beer> pagedResourcesAssembler;
 	@Autowired
 	private StyleRepository styleRepository;
 
@@ -82,6 +92,22 @@ public class BeerHateoasController
 		optional.get().add(selfLink);
 		return ResponseEntity.ok(optional.get());
 	}
+	@GetMapping(value = "/{id}/all", produces = MediaTypes.HAL_JSON_VALUE)
+	public ResponseEntity<JSONObject> getBeerDetails(@PathVariable("id") long beerId)
+	{
+		Optional<Beer> optional = beerService.findById(beerId);
+		if (optional.isEmpty())
+		{
+			return ResponseEntity.notFound().build();
+		}
+		Optional<Brewery> brewery = breweryService.findById(optional.get().getBrewery_id());
+		JSONObject jSONObject = new JSONObject();
+		jSONObject.put("Name", optional.get().getName());
+		jSONObject.put("Description", optional.get().getDescription());
+		jSONObject.put("Brewery Name", brewery.get().getName());
+
+		return ResponseEntity.ok(jSONObject);
+	}
 
 	/**
 	 * returns all beers
@@ -100,11 +126,10 @@ public class BeerHateoasController
 			long id = beer.getId();
 			Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
 			beer.add(selfLink);
-//			if (beerService.findById(id).size() > 0)
-//			{
-////				Link beerLink = linkTo(methodOn(BeerHateoasController.class)).getBeerById(id).withRel("allBeers");
-////				beer.add(beerLink)
-//			}
+
+			Link beerLink = linkTo(methodOn(BeerHateoasController.class).getBeerDetails(id)).withRel("allBeers");
+			beer.add(beerLink);
+
 		}
 
 		Link link = linkTo(getClass()).withSelfRel();
@@ -112,6 +137,31 @@ public class BeerHateoasController
 		return collectionModel;
 	}
 
+	@GetMapping(value = "/page", produces = MediaTypes.HAL_JSON_VALUE)
+	public PagedModel<EntityModel<Beer>> getAll(
+			@RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
+			@RequestParam(value = "pageSize", defaultValue = AppConstants.DEFAULT_PAGE_SIZE, required = false) int pageSize,
+			@RequestParam(value = "sortBy", defaultValue = AppConstants.DEFAULT_SORT_BY, required = false) String sortBy,
+			@RequestParam(value = "sortDir", defaultValue = AppConstants.DEFAULT_SORT_DIRECTION, required = false) String sortDir
+	)
+	{
+		Page<Beer> page = beerService.findAll(pageNo, pageSize, sortBy, sortDir);
+		for (Beer beer : page.getContent())
+		{
+			long id = beer.getId();
+			Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
+			beer.add(selfLink);
+
+			Link beerLink = linkTo(methodOn(BeerHateoasController.class).getBeerDetails(id)).withRel("allBeers");
+			beer.add(beerLink);
+		}
+		Link link = linkTo(getClass()).withSelfRel();
+
+		PagedModel<EntityModel<Beer>> result = pagedResourcesAssembler.toModel(page, link);
+
+		return result;
+
+	}
 	/**
 	 *
 	 * @param beerId

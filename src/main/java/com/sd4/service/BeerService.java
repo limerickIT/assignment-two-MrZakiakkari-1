@@ -13,6 +13,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 /**
@@ -36,6 +40,22 @@ public class BeerService
 	public List<Beer> findAll()
 	{
 		return (List<Beer>) beerRepository.findAll();
+	}
+	public Page<Beer> findAll(int pageNo, int pageSize)
+	{
+		Pageable pageable = PageRequest.of(pageNo, pageSize);
+		return beerRepository.findAll(pageable);
+	}
+	public Page<Beer> findAll(int pageNo, int pageSize, Sort sort)
+	{
+		Pageable pageable = PageRequest.of(pageNo, pageSize, sort);
+		return beerRepository.findAll(pageable);
+	}
+	public Page<Beer> findAll(int pageNo, int pageSize, String sortBy, String sortDirection)
+	{
+		Sort sort = sortDirection.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending()
+				: Sort.by(sortBy).descending();
+		return findAll(pageNo, pageSize, sort);
 	}
 
 	public Beer save(Beer beer)
