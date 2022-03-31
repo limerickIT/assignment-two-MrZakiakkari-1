@@ -2,7 +2,7 @@ server.port=8888
 
 spring.datasource.url=jdbc:h2:mem:GlobalBeers;
 spring.datasource.driverClassName=org.h2.Driver
-spring.datasource.username=alan.ryan
+spring.datasource.username=mzaki.alakkari
 spring.datasource.password=PASSWORD
 spring.jpa.defer-datasource-initialization=true
 

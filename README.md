@@ -1,5 +1,10 @@
 # Assignment Two
 
+## Setup
+
+To run the application create a application.properties file at [/src/main/resources/application.properties]().  You can use [/src/main/resources/application.properties.sample](application.properties.sample) as an example to create the application.properties file.
+Before running Spring Boot it would be recommended to clean and build the application before running.
+
 ## API Documentation
 
 <http://localhost:8888/swagger-ui/index.html>
