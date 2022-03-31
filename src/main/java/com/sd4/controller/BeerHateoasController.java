@@ -234,7 +234,7 @@ public class BeerHateoasController
 
 		Brewery brewery = breweryService.findById(beer.getBrewery_id()).get();
 		Category category = categoryService.findById(beer.getCat_id()).get();
-		Style style = styleRepository.findById(beer.getStyle_id()).get();
+		Style style = beer.getStyle_id() == -1 ? null : styleRepository.findById(beer.getStyle_id()).get();
 
 		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(beer, brewery, category, style);
 

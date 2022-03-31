@@ -84,7 +84,10 @@ public class BeerPdfPrinter
 		p1.add(new Paragraph(beer.getDescription(), COURIER));
 		p1.add(new Paragraph(brewery.getName(), COURIER));
 		p1.add(new Paragraph(new Anchor(brewery.getWebsite(), COURIER)));
-		p1.add(new Paragraph(style.getStyle_name(), COURIER));
+		if (style != null)
+		{
+			p1.add(new Paragraph(style.getStyle_name(), COURIER));
+		}
 		p1.setAlignment(Element.ALIGN_CENTER);
 
 		document.add(p1);
