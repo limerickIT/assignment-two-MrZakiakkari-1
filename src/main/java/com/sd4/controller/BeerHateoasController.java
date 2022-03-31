@@ -10,6 +10,12 @@ import com.sd4.service.BeerService;
 import com.sd4.service.BreweryService;
 import com.sd4.service.CategoryService;
 import com.sd4.utils.AppConstants;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -67,6 +73,7 @@ public class BeerHateoasController
 		return ResponseEntity.ok(beer);
 	}
 
+	@Operation(description = "Deletes a beer")
 	@DeleteMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity deleteBeerById(@PathVariable("id") long id)
 	{
@@ -79,6 +86,20 @@ public class BeerHateoasController
 		return ResponseEntity.ok(optional.get());
 	}
 
+	@Operation(summary = "Get a Beer by its id")
+	@ApiResponses(value =
+	{
+		@ApiResponse(responseCode = "200", description = "Found the Beer",
+				content =
+				{
+					@Content(mediaType = "application/json",
+							schema = @Schema(implementation = Beer.class))
+				}),
+		@ApiResponse(responseCode = "400", description = "Invalid id supplied",
+				content = @Content),
+		@ApiResponse(responseCode = "404", description = "Beer not found",
+				content = @Content)
+	})
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<Beer> getBeerById(@PathVariable("id") long id)
 	{
@@ -87,11 +108,18 @@ public class BeerHateoasController
 		{
 			return ResponseEntity.notFound().build();
 		}
-		Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
+		Beer beer = optional.get();
 
-		optional.get().add(selfLink);
+		Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
+		beer.add(selfLink);
+
+		Link beersLink = linkTo(methodOn(getClass()).getBeers()).withRel("all");
+		beer.add(beersLink);
+
 		return ResponseEntity.ok(optional.get());
 	}
+
+	@Operation(summary = "Get a beer by its id with it's name, description and the related brewery")
 	@GetMapping(value = "/{id}/all", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<JSONObject> getBeerDetails(@PathVariable("id") long beerId)
 	{
@@ -114,6 +142,7 @@ public class BeerHateoasController
 	 *
 	 * @return
 	 */
+	@Operation(summary = "Getting a list of beers")
 	@GetMapping(value = "", produces = MediaTypes.HAL_JSON_VALUE)
 	public CollectionModel<Beer> getBeers()
 	{
@@ -127,7 +156,7 @@ public class BeerHateoasController
 			Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
 			beer.add(selfLink);
 
-			Link beerLink = linkTo(methodOn(BeerHateoasController.class).getBeerDetails(id)).withRel("allBeers");
+			Link beerLink = linkTo(methodOn(BeerHateoasController.class).getBeerDetails(id)).withRel("details");
 			beer.add(beerLink);
 
 		}
@@ -136,7 +165,7 @@ public class BeerHateoasController
 		CollectionModel<Beer> collectionModel = CollectionModel.of(beers, link);
 		return collectionModel;
 	}
-
+	@Operation(summary = "Getting beers through pagination")
 	@GetMapping(value = "/page", produces = MediaTypes.HAL_JSON_VALUE)
 	public PagedModel<EntityModel<Beer>> getAll(
 			@RequestParam(value = "pageNo", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER, required = false) int pageNo,
@@ -152,7 +181,7 @@ public class BeerHateoasController
 			Link selfLink = linkTo(getClass()).slash(id).withSelfRel();
 			beer.add(selfLink);
 
-			Link beerLink = linkTo(methodOn(BeerHateoasController.class).getBeerDetails(id)).withRel("allBeers");
+			Link beerLink = linkTo(methodOn(BeerHateoasController.class).getBeerDetails(id)).withRel("details");
 			beer.add(beerLink);
 		}
 		Link link = linkTo(getClass()).withSelfRel();
@@ -162,6 +191,7 @@ public class BeerHateoasController
 		return result;
 
 	}
+
 	/**
 	 *
 	 * @param beerId
@@ -169,6 +199,10 @@ public class BeerHateoasController
 	 * @return
 	 * @throws Exception
 	 */
+	@Operation(summary = "Get beer image", parameters =
+	{
+		@Parameter(name = "size", description = "Thubnail or Large")
+	})
 	@GetMapping(value = "/image/{beerId}/{size}", produces = MediaType.IMAGE_JPEG_VALUE)
 	public ResponseEntity<BufferedImage> getBeerImage(@PathVariable("beerId") final long beerId, @PathVariable("size") final String size) throws Exception
 	{
@@ -187,7 +221,7 @@ public class BeerHateoasController
 			return ResponseEntity.ok(ImageIO.read(inputStream));
 		}
 	}
-
+	@Operation(summary = "Get a beer's details on a pdf")
 	@GetMapping(value = "/pdf/{beerId}", produces = MediaType.APPLICATION_PDF_VALUE)
 	public ResponseEntity<BeerPdfPrinter> getPdf(@PathVariable("beerId") long beerId) throws Exception
 	{
@@ -198,11 +232,11 @@ public class BeerHateoasController
 		}
 		final Beer beer = optional.get();
 
-		Optional<Brewery> brewery = breweryService.findById(beer.getBrewery_id());
-		Optional<Category> category = categoryService.findById(beer.getCat_id());
-		Optional<Style> style = styleRepository.findById(beer.getStyle_id());
+		Brewery brewery = breweryService.findById(beer.getBrewery_id()).get();
+		Category category = categoryService.findById(beer.getCat_id()).get();
+		Style style = styleRepository.findById(beer.getStyle_id()).get();
 
-		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(beer, brewery.get(), category.get(), style.get());
+		BeerPdfPrinter beerPdfPrinter = new BeerPdfPrinter(beer, brewery, category, style);
 
 		final File pdfFile = beerPdfPrinter.generatePdfReport();
 		try (final InputStream inputStream = new FileInputStream(pdfFile))
@@ -216,7 +250,7 @@ public class BeerHateoasController
 			return new ResponseEntity(IOUtils.toByteArray(inputStream), responseHeaders, HttpStatus.OK);
 		}
 	}
-
+	@Operation(summary = "Get a zipped folder of beer's images")
 	@GetMapping(value = "/zipped", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
 	public ResponseEntity<byte[]> getZippedBeerImages() throws IOException
 	{

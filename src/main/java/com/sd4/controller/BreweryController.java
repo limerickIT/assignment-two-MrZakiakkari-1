@@ -3,6 +3,7 @@ package com.sd4.controller;
 import com.google.maps.GeoApiContext;
 import com.sd4.model.Brewery;
 import com.sd4.service.BreweryService;
+import io.swagger.v3.oas.annotations.Operation;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -21,7 +22,6 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,12 +29,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  *
  * @author M.Zaki Al Akkari <https://github.com/MrZakiakkari>
  */
-@Controller
+@RestController
 @RequestMapping("brewery")
 public class BreweryController
 {
@@ -70,7 +71,7 @@ public class BreweryController
 		//breweryService.deleteById(id);
 		return ResponseEntity.ok(optional.get());
 	}
-
+	@Operation(summary = "Get a brewery by its id")
 	@GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
 	public ResponseEntity<Brewery> getBreweryById(@PathVariable("id") long id)
 	{
@@ -83,7 +84,7 @@ public class BreweryController
 		optional.get().add(selfLink);
 		return ResponseEntity.ok(optional.get());
 	}
-
+	@Operation(summary = "Get a list of breweries")
 	@GetMapping(value = "", produces = MediaTypes.HAL_JSON_VALUE)
 	public CollectionModel<Brewery> getBreweries()
 	{
@@ -98,7 +99,7 @@ public class BreweryController
 		CollectionModel<Brewery> collectionModel = CollectionModel.of(breweries, link);
 		return collectionModel;
 	}
-
+	@Operation(summary = "Get a brewery's location on the map")
 	@GetMapping("/map/{breweryId}")
 	public ResponseEntity<String> getMap(@PathVariable long breweryId)
 	{
@@ -132,7 +133,7 @@ public class BreweryController
 		breweryService.save(brewery);
 		return ResponseEntity.ok(brewery);
 	}
-
+	@Operation(summary = "Get a brewery's qr code")
 	@GetMapping(value = "/qrcode/{breweryId}", produces = MediaType.IMAGE_PNG_VALUE)
 	public ResponseEntity<BufferedImage> zxingQRCode(@PathVariable("breweryId") long breweryId) throws Exception
 	{
